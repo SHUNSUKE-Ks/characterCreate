@@ -1,7 +1,7 @@
 {
     "name": "CharacterCreate",
     "short_name": "CharCreate",
-    "start_url": "./characterCreate.html",
+    "start_url": "./index.html",
     "scope": ".",
     "display": "standalone",
     "background_color": "#000000",

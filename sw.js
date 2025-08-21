@@ -2,7 +2,7 @@
 const CACHE_NAME = 'character-create-v1';
 const ASSETS = [
     './',
-    './characterCreate.html',
+    './index.html',
     './manifest.webmanifest',
     './assets/Wizard_OldMan_Front_Pixel.png',
     './icons/CharacterCreate_Logo_192x192.png',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
                 }
                 return res;
-            }).catch(() => caches.match('./characterCreate.html')) // ネット不通時のフォールバック
+            }).catch(() => caches.match('./index.html')) // ネット不通時のフォールバック
         )
     );
 });
