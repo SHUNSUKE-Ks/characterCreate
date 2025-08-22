@@ -7,8 +7,8 @@
     <title>キャラクターを作る</title>
     <link rel="manifest" href="manifest.webmanifest">
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         * {
             margin: 0;
@@ -548,7 +548,8 @@
         <div class="points-section">
             <div class="bottom-buttons">
                 <button class="bottom-btn" id="start-life-btn">人生を始める</button>
-                <button class="bottom-btn" id="save-btn">保存</button>
+                <button class="bottom-btn" id="save-local-btn">ローカル保存</button>
+                <button class="bottom-btn" id="save-firebase-btn">Firebase保存</button>
                 <button class="bottom-btn" id="random-btn">ランダム</button>
                 <button class="bottom-btn" id="load-skill-book-btn">スキルブック読込</button>
                 <button class="bottom-btn" id="load-trait-book-btn">特質ブック読込</button>
@@ -769,7 +770,8 @@
         }
 
         // --- Firebase Integration ---
-        let saveCharacterData; // Define function in a broader scope
+        let fbApp; // Declare fbApp in a broader scope
+        let db;   // Declare db in a broader scope
 
         try {
             // Check if firebaseConfig is loaded
@@ -778,44 +780,80 @@
             }
 
             // Initialize Firebase
-            const { initializeApp } = firebase.app;
-            const { getFirestore, collection, addDoc } = firebase.firestore;
-
-            const fbApp = initializeApp(firebaseConfig);
-            const db = getFirestore(fbApp);
+            const fbApp = firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
             console.log("Firebase initialized successfully.");
 
-            // Overwrite the function to save to Firebase
-            saveCharacterData = async function() {
-                const characterName = document.querySelector('.name-field').value;
-                const characterDescription = document.querySelector('.description-text').value;
-
-                if (!characterName && !characterDescription) {
-                    alert('名前と出自を入力してください。');
-                    return;
-                }
-
-                try {
-                    const docRef = await addDoc(collection(db, "charactercreate"), {
-                        name: characterName,
-                        description: characterDescription,
-                        createdAt: new Date() // Add a timestamp
-                    });
-                    console.log("Document written with ID: ", docRef.id);
-                    alert('キャラクターをFirebaseに保存しました！');
-                } catch (e) {
-                    console.error("Error adding document: ", e);
-                    alert('Firebaseへの保存中にエラーが発生しました。コンソールを確認してください。');
-                }
-            }
-
-        } catch (error) {
+            } catch (error) {
             console.error("Firebase initialization failed:", error);
             alert("Firebaseの初期化に失敗しました。APIキーが正しく設定されているか確認してください。");
-            // Define a dummy function if Firebase fails, so the app doesn't crash
-            saveCharacterData = function() {
-                alert("Firebaseが初期化されていないため、保存できません。");
+        }
+
+        // Function to save to Firebase
+        async function saveCharacterDataFirebase() {
+            const characterName = document.querySelector('.name-field').value;
+            const characterDescription = document.querySelector('.description-text').value;
+
+            if (!characterName && !characterDescription) {
+                alert('名前と出自を入力してください。');
+                return;
             }
+
+            try {
+                const docRef = await db.collection("charactercreate").add({
+                    name: characterName,
+                    description: characterDescription,
+                    createdAt: new Date() // Add a timestamp
+                });
+                console.log("Document written with ID: ", docRef.id);
+                alert('キャラクターをFirebaseに保存しました！');
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                alert('Firebaseへの保存中にエラーが発生しました。コンソールを確認してください。');
+            }
+        }
+
+        // Function to save data locally (file download)
+        function saveCharacterDataLocal() {
+            const characterData = {
+                name: document.querySelector('.name-field').value,
+                gender: document.querySelector('.icon-btn[title="性別"]').textContent,
+                description: document.querySelector('.description-text').value,
+                appearance: document.querySelector('.appearance-text').value,
+                stats: {},
+                skills: [],
+                traits: []
+            };
+
+            document.querySelectorAll('.stat-row').forEach(row => {
+                const name = row.querySelector('.stat-name').textContent;
+                const value = row.querySelector('.stat-value').textContent;
+                characterData.stats[name] = parseInt(value);
+            });
+
+            document.querySelectorAll('.skill-row').forEach(row => {
+                const name = row.querySelector('.skill-name').value;
+                const dict = row.querySelector('.skill-dict').value;
+                if (name) characterData.skills.push({ name, dict });
+            });
+
+            document.querySelectorAll('.trait-row').forEach(row => {
+                const name = row.querySelector('.trait-name').value;
+                const dict = row.querySelector('.trait-dict').value;
+                if (name) characterData.traits.push({ name, dict });
+            });
+
+            const dataStr = JSON.stringify(characterData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'characterData.jsonc';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('キャラクターデータをローカルに保存しました。');
         }
 
         function saveSkillBook() {
@@ -917,7 +955,8 @@
         document.getElementById('save-trait-book-btn').addEventListener('click', saveTraitBook);
         document.getElementById('reset-button').addEventListener('click', resetStats);
         document.getElementById('random-btn').addEventListener('click', randomStats);
-        document.getElementById('save-btn').addEventListener('click', saveCharacterData);
+        document.getElementById('save-local-btn').addEventListener('click', saveCharacterDataLocal);
+        document.getElementById('save-firebase-btn').addEventListener('click', saveCharacterDataFirebase);
         
         document.getElementById('start-life-btn').addEventListener('click', function () {
             alert('人生を始めます！');
