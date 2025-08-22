@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>キャラクターを作る</title>
     <link rel="manifest" href="manifest.webmanifest">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
     <style>
         * {
             margin: 0;
@@ -694,6 +697,8 @@
         </div>
     </div>
 
+    <!-- Load Firebase config from external file (create this file locally) -->
+    <script src="firebase-config.js"></script>
     <script>
         let remainingPoints = 30;
 
@@ -761,46 +766,54 @@
             updateRemainingPoints();
         }
 
-        function saveCharacterData() {
-            const characterData = {
-                name: document.querySelector('.name-field').value,
-                gender: document.querySelector('.icon-btn[title="性別"]').textContent,
-                description: document.querySelector('.description-text').value,
-                appearance: document.querySelector('.appearance-text').value,
-                stats: {},
-                skills: [],
-                traits: []
-            };
+        // --- Firebase Integration ---
+        let saveCharacterData; // Define function in a broader scope
 
-            document.querySelectorAll('.stat-row').forEach(row => {
-                const name = row.querySelector('.stat-name').textContent;
-                const value = row.querySelector('.stat-value').textContent;
-                characterData.stats[name] = parseInt(value);
-            });
+        try {
+            // Check if firebaseConfig is loaded
+            if (typeof firebaseConfig === 'undefined') {
+                throw new Error("Firebase config is not loaded. Please create firebase-config.js");
+            }
 
-            document.querySelectorAll('.skill-row').forEach(row => {
-                const name = row.querySelector('.skill-name').value;
-                const dict = row.querySelector('.skill-dict').value;
-                if (name) characterData.skills.push({ name, dict });
-            });
+            // Initialize Firebase
+            const { initializeApp } = firebase.app;
+            const { getFirestore, collection, addDoc } = firebase.firestore;
 
-            document.querySelectorAll('.trait-row').forEach(row => {
-                const name = row.querySelector('.trait-name').value;
-                const dict = row.querySelector('.trait-dict').value;
-                if (name) characterData.traits.push({ name, dict });
-            });
+            const fbApp = initializeApp(firebaseConfig);
+            const db = getFirestore(fbApp);
+            console.log("Firebase initialized successfully.");
 
-            const dataStr = JSON.stringify(characterData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'characterData.jsonc';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            alert('キャラクターデータを保存しました。');
+            // Overwrite the function to save to Firebase
+            saveCharacterData = async function() {
+                const characterName = document.querySelector('.name-field').value;
+                const characterDescription = document.querySelector('.description-text').value;
+
+                if (!characterName && !characterDescription) {
+                    alert('名前と出自を入力してください。');
+                    return;
+                }
+
+                try {
+                    const docRef = await addDoc(collection(db, "charactercreate"), {
+                        name: characterName,
+                        description: characterDescription,
+                        createdAt: new Date() // Add a timestamp
+                    });
+                    console.log("Document written with ID: ", docRef.id);
+                    alert('キャラクターをFirebaseに保存しました！');
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                    alert('Firebaseへの保存中にエラーが発生しました。コンソールを確認してください。');
+                }
+            }
+
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            alert("Firebaseの初期化に失敗しました。APIキーが正しく設定されているか確認してください。");
+            // Define a dummy function if Firebase fails, so the app doesn't crash
+            saveCharacterData = function() {
+                alert("Firebaseが初期化されていないため、保存できません。");
+            }
         }
 
         function saveSkillBook() {
