@@ -530,7 +530,7 @@
     <header class="header-container">
         <div class="header-left">
             <img src="assets/Wizard_OldMan_Front_Pixel.png" alt="Character Icon" class="character-icon">
-            <div class="speech-bubble">キャラクターを作成してくれ</div>
+            <div class="speech-bubble" id="speech-bubble-text">...</div>
         </div>
         <div class="header-right">
             <div class="header-info">残り才能: <span id="header-remaining-points">30</span></div>
@@ -699,6 +699,8 @@
 
     <!-- Load Firebase config from external file (create this file locally) -->
     <script src="firebase-config.js"></script>
+    <!-- Load progress comments -->
+    <script src="data/progress-comments.js"></script>
     <script>
         let remainingPoints = 30;
 
@@ -937,6 +939,16 @@
         // タッチイベントの最適化
         document.addEventListener('touchstart', function () { }, { passive: true });
         document.addEventListener('touchmove', function () { }, { passive: true });
+
+        function setRandomSpeechBubble() {
+            if (typeof progressComments !== 'undefined' && progressComments.length > 0) {
+                const bubble = document.getElementById('speech-bubble-text');
+                const randomIndex = Math.floor(Math.random() * progressComments.length);
+                bubble.textContent = progressComments[randomIndex];
+            }
+        }
+        // Set initial bubble text on page load
+        window.addEventListener('DOMContentLoaded', setRandomSpeechBubble);
 
         // PWA Service Worker registration
         if ('serviceWorker' in navigator) {
